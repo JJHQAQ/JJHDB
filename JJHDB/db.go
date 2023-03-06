@@ -3,8 +3,9 @@ package JJHDB
 import (
 	"sync"
 	"time"
+	// "os"
+	// "fmt"
 )
-
 
 type JDB struct {
 
@@ -23,40 +24,43 @@ func Make() *JDB {
 	db:= JDB{}
 	db.mem = newMemtable()
 	db.imm = nil
-	db.version.lastSeq = 0
 	db.writeToLog = make(chan Work,1000)
+	db.initversion()
 	return &db
 }
 
-func (db *JDB)Put(key string,value string) bool{
-
+func (db *JDB)Put(key string,value string) uint64{
 	w:=BuildWork(key,value)
 	db.writeToLog<-w
+	seq:=<-w.Done
 
-	// seq:=<-w.Done
-
-	return true
+	return seq
 }
 
 func (db *JDB)logWriter() {
 	
 	batch:= Batch{}
-	ready:= [](chan int64){}
-	timeout := 10*time.Millisecond
+	ready:= [](chan uint64){}
+	timeout := 100*time.Millisecond
 	for {
 		select {
 		case work:=<-db.writeToLog:
 			batch.AppendRaw(work.key,work.val)
 			ready = append(ready,work.Done)
 			if (batch.size()>=10) {
-				go logWrite(&batch,&ready)
+				db.logWrite(&batch,&ready)
 				batch = Batch{}
-				ready = [](chan int64){}
+				ready = [](chan uint64){}
 			}
+			
+			continue
 		case <-time.After(timeout):
-			go logWrite(&batch,&ready)
+			if (batch.size()==0){
+				continue
+			}
+			db.logWrite(&batch,&ready)
 			batch = Batch{}
-			ready = [](chan int64){}
+			ready = [](chan uint64){}
 		}
 	}
 

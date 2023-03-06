@@ -1,5 +1,7 @@
 package JJHDB
 
+// import "fmt"
+
 type Batch struct {
 
 	entrys []KVpair
@@ -10,7 +12,7 @@ func BuildBatch() Batch {
 	return Batch{}
 }
 
-func (b Batch)AppendRaw(k string,val string) bool{
+func (b *Batch)AppendRaw(k string,val string) bool{
 	V:=Value{}
 	V.val = val
 	kv:= KVpair{key:k,value:V}
@@ -18,7 +20,7 @@ func (b Batch)AppendRaw(k string,val string) bool{
 	return true
 }
 
-func (b Batch)AppendKV(kv KVpair) bool {
+func (b *Batch)AppendKV(kv KVpair) bool {
 	b.entrys = append(b.entrys,kv)
 	return true
 }

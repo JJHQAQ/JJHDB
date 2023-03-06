@@ -19,15 +19,12 @@ type KVpair struct {
 type Work struct {
 	key string
 	val string
-	Done chan int64
+	Done chan uint64
 }
 
 func BuildWork(k string,v string) Work{
 	w:=Work{key:k,val:v}
-	w.Done = make(chan int64)
+	w.Done = make(chan uint64)
 	return w
 }
 
-type Version struct {
-	lastSeq   int64
-}

@@ -6,10 +6,6 @@ import (
 
 
 type Memtable struct {
-
-
-
-
 	table   *stl4go.SkipList[Internalkey, Value]
 }
 
