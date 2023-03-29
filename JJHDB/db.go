@@ -3,7 +3,7 @@ package JJHDB
 import (
 	"sync"
 	"time"
-	// "os"
+	"os"
 	// "fmt"
 )
 
@@ -13,9 +13,12 @@ type JDB struct {
 	mem 		*Memtable
 	imm  		*Memtable
 	version 	Version
+	logfile     *os.File
 
 	writeToLog	chan Work
 
+	sstlist 	[]*SSTable
+	sst_mutex	sync.RWMutex
 }
 
 
@@ -23,9 +26,12 @@ type JDB struct {
 func Make() *JDB {
 	db:= JDB{}
 	db.mem = newMemtable()
-	db.imm = nil
+	db.imm = newMemtable()
 	db.writeToLog = make(chan Work,1000)
-	db.initversion()
+	db.logfile = nil
+	db.version.initversion()
+	db.recoverFromLog()
+	db.recoverSSTable()
 	return &db
 }
 
@@ -35,6 +41,26 @@ func (db *JDB)Put(key string,value string) uint64{
 	seq:=<-w.Done
 
 	return seq
+}
+
+func (db *JDB)Get(key string,index uint64) (bool,string) {
+	if (index==0) {
+		index = db.version.LastSeq
+	}
+
+	// for it:=db.mem.table.Iterate();it.IsNotEnd();it.MoveToNext() {
+	// 	fmt.Println(it.Key(),it.Value())
+	// }
+
+	flag,V:=db.searchInmem(key,index)
+	// fmt.Println("pass the mem")
+	if (flag) {
+		return true,V.val
+	}
+
+	flag,V = db.searchInSSTabel(key,index)
+
+	return flag,V.val
 }
 
 func (db *JDB)logWriter() {
@@ -52,8 +78,6 @@ func (db *JDB)logWriter() {
 				batch = Batch{}
 				ready = [](chan uint64){}
 			}
-			
-			continue
 		case <-time.After(timeout):
 			if (batch.size()==0){
 				continue
@@ -67,7 +91,7 @@ func (db *JDB)logWriter() {
 }
 
 func (db *JDB)compaction() {
-
+	//TODO
 }
 
 func (db *JDB)backWork() {

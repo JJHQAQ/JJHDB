@@ -4,7 +4,7 @@ package JJHDB
 
 type Internalkey struct {
 	key string
-	seqNumber int64
+	seqNumber uint64
 }
 
 type Value struct {

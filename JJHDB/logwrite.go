@@ -8,8 +8,9 @@ import (
 )
 
 func (db *JDB)newlogfilename() string {
-	db.version.logfileid++
-	filename:= filepath.Join(db.version.maindir,"log","log-"+strconv.Itoa(db.version.logfileid)+".txt")
+	db.version.Logfileid++
+	db.version.persist()
+	filename:= filepath.Join(db.version.Maindir,"log","log-"+strconv.Itoa(db.version.Logfileid)+".txt")
 	return filename
 }
 
@@ -49,14 +50,16 @@ func writeone(f *os.File,index uint64,p KVpair){
 }
 
 func (db *JDB)logWrite(batch *Batch,ready *[](chan uint64)) {
-	 if db.version.logfile == nil {
-		db.version.logfile = db.newlogfile()
-	 }
-	 file:= db.version.logfile
-	 for i,p :=range batch.entrys {
-		db.version.lastSeq++
-		// fmt.Println(db.version.lastSeq,p)
-		writeone(file,db.version.lastSeq,p)
-		(*ready)[i]<-db.version.lastSeq 
-	 }
+	db.arrangeMem()
+
+	file:= db.logfile
+	db.mem.mutex.Lock()
+	for i,p :=range batch.entrys {
+	db.version.LastSeq++
+	// fmt.Println(db.version.lastSeq,p)
+	writeone(file,db.version.LastSeq,p)
+	(*ready)[i]<-db.version.LastSeq 
+	db.mem.Put(db.version.LastSeq,p)
+	}
+	db.mem.mutex.Unlock()
 }
