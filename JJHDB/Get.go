@@ -4,7 +4,7 @@ import (
 	// "sync"
 	// "time"
 	// "os"
-	// "fmt"
+	"fmt"
 )
 
 func (db *JDB)searchInmem(key string,index uint64) (bool,Value) {
@@ -37,10 +37,10 @@ func (db *JDB)searchInSSTabel(key string,index uint64) (bool,Value) {
 	value:=Value{}
 	db.sst_mutex.RLock()
 	for i:=len(db.sstlist)-1;i>=0;i-- {
-		// fmt.Println("start to find in ",db.sstlist[i].pathname)
+		fmt.Println("start to find in ",db.sstlist[i].pathname)
 		ok,val :=db.sstlist[i].find(key,index)
 		if (ok) {
-			// fmt.Println("OK in searchInSSTable",val)
+			fmt.Println("find in searchInSSTable",val)
 			value.val = val
 			flag = true
 			break

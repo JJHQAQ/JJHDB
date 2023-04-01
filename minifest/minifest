@@ -1,1 +1,12 @@
-{"LastSeq":52,"Logfileid":2,"LogFileName":"log\\log-2.txt","Maindir":".","Tablemax":50,"Sstableid":1,"Sstablename":["SSTable\\SSTable-1.txt"]}
+{
+	"LastSeq": 1,
+	"Logfileid": 1,
+	"LogFileName": "log\\log-1.txt",
+	"Maindir": ".",
+	"Tablemax": 50,
+	"Sstableid": 0,
+	"Sstablename": [],
+	"LocalAddress": "127.0.0.1:8080",
+	"Status": 0,
+	"LeaderIP": "127.0.0.1:8080"
+}

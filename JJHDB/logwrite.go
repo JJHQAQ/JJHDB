@@ -55,11 +55,20 @@ func (db *JDB)logWrite(batch *Batch,ready *[](chan uint64)) {
 	file:= db.logfile
 	db.mem.mutex.Lock()
 	for i,p :=range batch.entrys {
-	db.version.LastSeq++
+	var index uint64 = 0
+	if (batch.indexs[i]==0){
+		db.version.LastSeq++
+		index=db.version.LastSeq
+	}else{
+		index = batch.indexs[i]
+		if (index>db.version.LastSeq) {
+			db.version.LastSeq = index
+		}
+	}
 	// fmt.Println(db.version.lastSeq,p)
-	writeone(file,db.version.LastSeq,p)
-	(*ready)[i]<-db.version.LastSeq 
-	db.mem.Put(db.version.LastSeq,p)
+	writeone(file,index,p)
+	(*ready)[i]<-index
+	db.mem.Put(index,p)
 	}
 	db.mem.mutex.Unlock()
 }

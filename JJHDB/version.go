@@ -7,6 +7,10 @@ import(
 	"encoding/json"
 )
 
+const leader int = 0
+const back_up_leader int = 1
+const follower int = 2
+
 type Version struct {
 	LastSeq   uint64
 	Logfileid int
@@ -16,6 +20,11 @@ type Version struct {
 	Tablemax  int
 	Sstableid int
 	Sstablename []string
+
+	LocalAddress  string
+
+	Status	int//0:leader  1:back-up leader  2:follower
+	LeaderIP string
 }
 
 func (v *Version)initversion(){
@@ -43,7 +52,7 @@ func (v *Version)persist(){
     if err != nil {
         fmt.Println(err)
     }
-	json_str, err := json.Marshal(v)
+	json_str, err := json.MarshalIndent(v,"", "\t")
 	if err != nil {
         panic(err)
     }

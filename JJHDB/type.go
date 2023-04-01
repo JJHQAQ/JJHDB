@@ -16,15 +16,4 @@ type KVpair struct {
 	value Value
 }
 
-type Work struct {
-	key string
-	val string
-	Done chan uint64
-}
-
-func BuildWork(k string,v string) Work{
-	w:=Work{key:k,val:v}
-	w.Done = make(chan uint64)
-	return w
-}
 
