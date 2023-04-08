@@ -1,19 +1,21 @@
 package JJHDB
 
-
-
 type Internalkey struct {
-	key string
+	key       string
 	seqNumber uint64
 }
 
 type Value struct {
-	val  string
+	val string
 }
 
 type KVpair struct {
-	key string
+	key   string
 	value Value
 }
 
-
+type SeqKV struct {
+	seqNumber uint64
+	key       string
+	value     string
+}

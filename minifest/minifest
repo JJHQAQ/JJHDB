@@ -1,11 +1,14 @@
 {
-	"LastSeq": 1,
-	"Logfileid": 1,
-	"LogFileName": "log\\log-1.txt",
+	"LastSeq": 103,
+	"Logfileid": 3,
+	"LogFileName": "log\\log-3.txt",
 	"Maindir": ".",
 	"Tablemax": 50,
-	"Sstableid": 0,
-	"Sstablename": [],
+	"Sstableid": 2,
+	"Sstablename": [
+		"SSTable\\SSTable-1.txt",
+		"SSTable\\SSTable-2.txt"
+	],
 	"LocalAddress": "127.0.0.1:8080",
 	"Status": 0,
 	"LeaderIP": "127.0.0.1:8080"

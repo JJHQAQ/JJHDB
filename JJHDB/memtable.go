@@ -5,15 +5,14 @@ import (
 	"sync"
 )
 
-
 type Memtable struct {
-	table   *stl4go.SkipList[Internalkey, Value]
-	mutex 	sync.RWMutex
+	table *stl4go.SkipList[Internalkey, Value]
+	mutex sync.RWMutex
 }
 
 func newMemtable() *Memtable {
-	newtable:= Memtable{}
-	newtable.table=stl4go.NewSkipListFunc[Internalkey, Value](func (a,b Internalkey)int {
+	newtable := Memtable{}
+	newtable.table = stl4go.NewSkipListFunc[Internalkey, Value](func(a, b Internalkey) int {
 		r := stl4go.OrderedCompare(a.key, b.key)
 		if r != 0 {
 			return r
@@ -24,7 +23,6 @@ func newMemtable() *Memtable {
 	return &newtable
 }
 
-func (M *Memtable)Put(index uint64,p KVpair){
-	M.table.Insert(Internalkey{seqNumber:index,key:p.key},p.value)
+func (M *Memtable) Put(index uint64, p KVpair) {
+	M.table.Insert(Internalkey{seqNumber: index, key: p.key}, p.value)
 }
-

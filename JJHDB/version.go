@@ -1,10 +1,10 @@
 package JJHDB
 
-import(
-	"os"
-	"io/ioutil"
-	"fmt"
+import (
 	"encoding/json"
+	"fmt"
+	"io/ioutil"
+	"os"
 )
 
 const leader int = 0
@@ -12,22 +12,23 @@ const back_up_leader int = 1
 const follower int = 2
 
 type Version struct {
-	LastSeq   uint64
-	Logfileid int
-	LogFileName string
-	Maindir   string
+	LastSeq         uint64
+	Logfileid       int
+	LogFileName     string
+	LastLogFileName string
+	Maindir         string
 
-	Tablemax  int
-	Sstableid int
+	Tablemax    int
+	Sstableid   int
 	Sstablename []string
 
-	LocalAddress  string
+	LocalAddress string
 
-	Status	int//0:leader  1:back-up leader  2:follower
+	Status   int //0:leader  1:back-up leader  2:follower
 	LeaderIP string
 }
 
-func (v *Version)initversion(){
+func (v *Version) initversion() {
 
 	// v.LastSeq = 0
 	// v.Maindir = "."
@@ -39,7 +40,7 @@ func (v *Version)initversion(){
 		panic(err)
 	}
 
-	err = json.Unmarshal(content, v) 
+	err = json.Unmarshal(content, v)
 
 	if err != nil {
 		fmt.Println("json unmarshal failed!")
@@ -47,22 +48,22 @@ func (v *Version)initversion(){
 	}
 }
 
-func (v *Version)persist(){
+func (v *Version) persist() {
 	file, err := ioutil.TempFile(".\\minifest", "minifest-*.txt")
-    if err != nil {
-        fmt.Println(err)
-    }
-	json_str, err := json.MarshalIndent(v,"", "\t")
 	if err != nil {
-        panic(err)
-    }
+		fmt.Println(err)
+	}
+	json_str, err := json.MarshalIndent(v, "", "\t")
+	if err != nil {
+		panic(err)
+	}
 	file.Write(json_str)
-	name:=file.Name()
+	name := file.Name()
 	file.Close()
 	os.Remove(".\\minifest\\minifest")
-	
-	err = os.Rename(name,".\\minifest\\minifest") 
+
+	err = os.Rename(name, ".\\minifest\\minifest")
 	if err != nil {
-        panic(err)
-    }
+		panic(err)
+	}
 }
