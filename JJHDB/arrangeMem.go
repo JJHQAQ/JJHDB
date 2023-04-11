@@ -13,27 +13,49 @@ func (db *JDB) needarrange() bool {
 
 	if db.mem.table.Len() <= db.version.Tablemax {
 		flag = false
-	}
 
-	if db.imm.table.IsEmpty() {
+		return flag
+	}
+	// fmt.Println("table full")
+	if !db.imm.table.IsEmpty() {
 		flag = false
+		// fmt.Println("imm full")
+		return flag
 	}
 
 	if db.backWorkCnt > 0 {
 		flag = false
+		// fmt.Println("backWork running")
 	}
+
+	db.generating.Lock()
+	if db.generateflag {
+		flag = false
+	}
+	db.generating.Unlock()
 
 	return flag
 }
 
-func (db *JDB) newSSTableName() string {
-	db.version.Sstableid++
-	filename := filepath.Join(db.version.Maindir, "SSTable", "SSTable-"+strconv.Itoa(db.version.Logfileid)+".txt")
+func (db *JDB) newSSTableName(id int) string {
+
+	db.mutex.Lock()
+	defer db.mutex.Unlock()
+	if id == -1 {
+		db.version.Sstableid++
+
+		id = db.version.Sstableid
+	} else {
+		if id > db.version.Sstableid {
+			db.version.Sstableid = id
+		}
+	}
+	filename := filepath.Join(db.version.Maindir, "SSTable", "SSTable-"+strconv.Itoa(id)+".txt")
 	return filename
 }
 
-func (db *JDB) newSSTablefile() *os.File {
-	filename := db.newSSTableName()
+func (db *JDB) newSSTablefile(id int) *os.File {
+	filename := db.newSSTableName(id)
 
 	file, err := os.OpenFile(filename, os.O_CREATE|os.O_RDWR|os.O_APPEND, os.ModeAppend|os.ModePerm)
 
@@ -87,7 +109,21 @@ func writeInt(f *os.File, n int64) {
 }
 
 func (db *JDB) generateSSTable() bool {
-	file := db.newSSTablefile()
+
+	db.imm.mutex.Lock()
+	db.generating.Lock()
+	if db.imm.table.IsEmpty() || db.generateflag {
+		fmt.Println("??? Why??: ", db.imm.table.IsEmpty(), db.generateflag)
+
+		db.imm.mutex.Unlock()
+		db.generating.Unlock()
+		return true
+	}
+	db.generateflag = true
+	db.generating.Unlock()
+	db.imm.mutex.Unlock()
+
+	file := db.newSSTablefile(-1)
 
 	breakpoint := make([]int64, 0)
 	breakval := make([]Internalkey, 0)
@@ -113,19 +149,25 @@ func (db *JDB) generateSSTable() bool {
 
 	writeInt(file, foot)
 
-	db.version.Sstablename = append(db.version.Sstablename, file.Name())
+	db.version.AddSstablename(file.Name(), db.version.Sstableid)
 
 	db.sst_mutex.Lock()
-	db.sstlist = append(db.sstlist, NewSStable(file.Name()))
+	db.sstlist.AddNewSSTable(file.Name(), db.version.Sstableid)
 	db.sst_mutex.Unlock()
 
 	file.Close()
 
 	db.version.LastLogFileName = ""
+	fmt.Println("Clear this")
+	db.version.persist()
 
 	db.imm.mutex.Lock()
 	db.imm.table.Clear()
 	db.imm.mutex.Unlock()
+
+	db.generating.Lock()
+	db.generateflag = false
+	db.generating.Unlock()
 
 	return true
 }
@@ -139,8 +181,8 @@ func (db *JDB) arrangeMem() {
 		db.mem, db.imm = db.imm, db.mem
 		db.mem.mutex.Unlock()
 		db.imm.mutex.Unlock()
-		go db.generateSSTable()
 		db.version.LastLogFileName = db.logfile.Name()
+		go db.generateSSTable()
 		db.logfile.Close()
 		db.logfile = nil
 		needPersist = true
@@ -155,6 +197,7 @@ func (db *JDB) arrangeMem() {
 	}
 
 	if needPersist {
+		fmt.Println("persist this")
 		db.version.persist()
 	}
 }

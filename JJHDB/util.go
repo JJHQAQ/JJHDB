@@ -22,8 +22,10 @@ func (db *JDB) removeall() {
 	db.removeDir(filepath.Join(db.version.Maindir, "SSTable"))
 	db.removeDir(filepath.Join(db.version.Maindir, "log"))
 	db.version.LastSeq = 1
-	db.version.Sstablename = []string{}
+	db.version.Sstablenames = []string{}
+	db.version.sstablenames = []Sstablename{}
 	db.version.LogFileName = ""
+	db.version.LastLogFileName = ""
 	db.version.Logfileid = 0
 	db.version.Sstableid = 0
 	db.version.persist()

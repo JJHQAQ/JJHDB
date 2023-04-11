@@ -57,11 +57,20 @@ func (db *JDB) logReadOne(file *os.File) error {
 func (db *JDB) recoverFromLog() {
 
 	filename := ""
-	if len(db.version.LastLogFileName) == 0 {
-		filename = db.version.LogFileName
-	} else {
+	if len(db.version.LastLogFileName) != 0 {
 		filename = db.version.LastLogFileName
+		file, err := os.Open(filename)
+		if err != nil {
+			panic(err)
+		}
+
+		for db.logReadOne(file) == nil {
+			//
+		}
+		file.Close()
 	}
+
+	filename = db.version.LogFileName
 
 	if len(filename) == 0 {
 		return
@@ -86,7 +95,13 @@ func (db *JDB) recoverFromLog() {
 }
 
 func (db *JDB) recoverSSTable() {
-	for _, path := range db.version.Sstablename {
-		db.sstlist = append(db.sstlist, NewSStable(path))
+	// var idcnt int = 0
+
+	for _, path := range db.version.sstablenames {
+		// idcnt++
+		db.sst_mutex.Lock()
+		db.sstlist.AddNewSSTable(path.name, path.id)
+		db.sst_mutex.Unlock()
+		// db.sstlist = append(db.sstlist, NewSStable(path, idcnt))
 	}
 }

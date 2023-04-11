@@ -17,12 +17,15 @@ type JDB struct {
 
 	writeToLog chan Work
 
-	sstlist   []*SSTable
+	sstlist   SSTableList
 	sst_mutex sync.RWMutex
 
 	backLeaderList []*Server
 	followeList    []*Server
 	servermutex    sync.RWMutex
+
+	generating   sync.Mutex
+	generateflag bool
 }
 
 func Make() *JDB {
@@ -31,6 +34,7 @@ func Make() *JDB {
 	db.imm = newMemtable()
 	db.writeToLog = make(chan Work, 1000)
 	db.logfile = nil
+	db.generateflag = false
 	db.version.initversion()
 	if db.version.Status == leader {
 		db.recoverFromLog()
@@ -39,21 +43,6 @@ func Make() *JDB {
 		db.removeall()
 	}
 	return &db
-}
-
-func (db *JDB) register(address string, status int) {
-
-	S := NewServer(address, status)
-
-	db.servermutex.Lock()
-	if status == 1 {
-		db.backLeaderList = append(db.backLeaderList, S)
-	} else {
-		db.followeList = append(db.followeList, S)
-	}
-	db.servermutex.Unlock()
-
-	go db.repSSTable(S)
 }
 
 func (db *JDB) Put(key string, value string) uint64 {
@@ -72,7 +61,7 @@ func (db *JDB) Put(key string, value string) uint64 {
 
 	num := make(chan struct{})
 	for _, s := range db.backLeaderList {
-		s.Replication(key, value, seq, &num)
+		s.Replication(key, value, seq, num)
 	}
 	L := len(db.backLeaderList)
 	for i := 0; i < L; i++ {

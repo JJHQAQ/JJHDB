@@ -1,7 +1,10 @@
 package JJHDB
 
 import (
+	"io/ioutil"
+	"sort"
 	"sync"
+
 	// "time"
 	"encoding/binary"
 	"io"
@@ -18,19 +21,35 @@ type Keypoint struct {
 type SSTable struct {
 	pathname string
 	file     *os.File
+	id       int
 
 	keypoints []Keypoint
 	foot      int64
 	mutex     sync.Mutex
 }
 
-func NewSStable(path string) *SSTable {
+func NewSStable(path string, id int) *SSTable {
 
 	s := SSTable{}
+	s.id = id
 	s.pathname = path
 	s.keypoints = make([]Keypoint, 0)
 	s.file = nil
 	return &s
+}
+
+func (S *SSTable) readall() []byte {
+	S.mutex.Lock()
+	defer S.mutex.Unlock()
+	S.init()
+	S.file.Seek(0, 0)
+	content, err := ioutil.ReadAll(S.file)
+	// fmt.Println(S.file.Name(), content)
+	// fmt.Println(err)
+	if err != nil {
+		panic(err)
+	}
+	return content
 }
 
 func (S *SSTable) find(key string, index uint64) (bool, string) {
@@ -146,4 +165,27 @@ func (S *SSTable) init() {
 	}
 
 	// S.file.Seek(0,io.SeekStart)
+}
+
+type SSTableList []*SSTable
+
+func (list SSTableList) Len() int           { return len(list) }
+func (list SSTableList) Less(i, j int) bool { return list[i].id < list[j].id }
+func (list SSTableList) Swap(i, j int)      { list[i], list[j] = list[j], list[i] }
+
+func (list *SSTableList) AddNewSSTable(name string, id int) {
+	*list = append(*list, NewSStable(name, id))
+	sort.Sort(*list)
+}
+
+func (db *JDB) addSSTable(filebytes []byte, id int) {
+	file := db.newSSTablefile(id)
+
+	file.Write(filebytes)
+	db.sst_mutex.Lock()
+	db.version.AddSstablename(file.Name(), id)
+	db.sstlist.AddNewSSTable(file.Name(), id)
+	db.sst_mutex.Unlock()
+
+	file.Close()
 }

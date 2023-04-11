@@ -65,11 +65,59 @@ type ReplyADS struct {
 	Success bool
 }
 
-func (this DBServer) ADDSSTable(req RequestADS, res *ReplyADS) {
+func (this DBServer) ADDSSTable(req RequestADS, res *ReplyADS) error {
 
+	this.db.addSSTable(req.Filebytes, req.SSTabelid)
+
+	res.Success = true
+
+	return nil
 }
 
-// func (this DBServer)
+type RequestGET struct {
+	Key   string
+	Index uint64
+}
+
+type ReplyGET struct {
+	Success bool
+	Value   string
+}
+
+func (this DBServer) Get(req RequestGET, res *ReplyGET) error {
+	res.Success, res.Value = this.db.Get(req.Key, req.Index)
+	// fmt.Println(res.Value)
+	return nil
+}
+
+type RequestPUT struct {
+	Key   string
+	Value string
+}
+
+type ReplyPUT struct {
+	seq uint64
+}
+
+func (this DBServer) Put(req RequestPUT, res *ReplyPUT) error {
+	res.seq = this.db.Put(req.Key, req.Value)
+	return nil
+}
+
+func (db *JDB) register(address string, status int) {
+
+	S := NewServer(address, status)
+
+	db.servermutex.Lock()
+	if status == 1 {
+		db.backLeaderList = append(db.backLeaderList, S)
+	} else {
+		db.followeList = append(db.followeList, S)
+	}
+	db.servermutex.Unlock()
+
+	go db.repSSTable(S)
+}
 
 func (db *JDB) StartService() {
 	var DBS *DBServer
