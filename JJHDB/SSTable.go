@@ -38,6 +38,15 @@ func NewSStable(path string, id int) *SSTable {
 	return &s
 }
 
+func (S *SSTable) Clear() {
+	S.mutex.Lock()
+	defer S.mutex.Unlock()
+	S.file.Close()
+	S.file = nil
+	S.keypoints = make([]Keypoint, 0)
+	S.foot = 0
+}
+
 func (S *SSTable) readall() []byte {
 	S.mutex.Lock()
 	defer S.mutex.Unlock()
@@ -176,6 +185,10 @@ func (list SSTableList) Swap(i, j int)      { list[i], list[j] = list[j], list[i
 func (list *SSTableList) AddNewSSTable(name string, id int) {
 	*list = append(*list, NewSStable(name, id))
 	sort.Sort(*list)
+}
+
+func (list *SSTableList) Clear() {
+	list = &SSTableList{}
 }
 
 func (db *JDB) addSSTable(filebytes []byte, id int) {

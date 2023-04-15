@@ -1,7 +1,9 @@
 package JJHDB
 
 import (
+	"fmt"
 	"io/ioutil"
+	"net/rpc"
 	"os"
 	"path/filepath"
 )
@@ -19,6 +21,17 @@ func (db *JDB) delBackworkcnt() {
 }
 
 func (db *JDB) removeall() {
+	if db.logfile != nil {
+		db.logfile.Close()
+		db.logfile = nil
+	}
+	db.sst_mutex.Lock()
+	for i := len(db.sstlist) - 1; i >= 0; i-- {
+		db.sstlist[i].Clear()
+	}
+	db.sstlist.Clear()
+	db.sst_mutex.Unlock()
+
 	db.removeDir(filepath.Join(db.version.Maindir, "SSTable"))
 	db.removeDir(filepath.Join(db.version.Maindir, "log"))
 	db.version.LastSeq = 1
@@ -44,4 +57,34 @@ func (db *JDB) removeDir(deletePath string) error {
 		}
 	}
 	return nil
+}
+
+func (db *JDB) SendLog(msg string) {
+	type RequestLog struct {
+		Message string
+	}
+
+	type ReplyLog struct {
+		OK bool
+	}
+	conn, err1 := rpc.Dial("tcp", db.version.LogServerIP)
+	if err1 != nil {
+		fmt.Println(err1)
+		return
+	}
+	defer conn.Close()
+
+	var res ReplyLog
+	req := RequestLog{
+		Message: msg,
+	}
+	err2 := conn.Call("LOGServer.Log", req, &res)
+	if err2 != nil {
+		fmt.Println(err2)
+	}
+	if res.OK {
+		fmt.Printf("LOG 发送成功")
+	} else {
+		panic("connect error\n")
+	}
 }

@@ -51,23 +51,25 @@ func (db *JDB) Put(key string, value string) uint64 {
 	}
 
 	seq := db.put(key, value)
-
+	db.SendLog("Leader:" + db.version.LocalAddress + " Start to Replicate...")
 	db.servermutex.RLock()
 	defer db.servermutex.RUnlock()
 
 	for _, s := range db.followeList {
 		s.Replication(key, value, seq, nil)
+		db.SendLog("Node:" + s.Address + "Get the Replication")
 	}
 
 	num := make(chan struct{})
 	for _, s := range db.backLeaderList {
 		s.Replication(key, value, seq, num)
+		db.SendLog("Node:" + s.Address + "Get the Replication")
 	}
 	L := len(db.backLeaderList)
 	for i := 0; i < L; i++ {
 		<-num
 	}
-
+	db.SendLog("Leader:" + db.version.LocalAddress + "  Put success")
 	return seq
 }
 
@@ -101,11 +103,13 @@ func (db *JDB) Get(key string, index uint64) (bool, string) {
 	flag, V := db.searchInmem(key, index)
 	// fmt.Println("pass the mem")
 	if flag {
+		go db.SendLog("Node:" + db.version.LocalAddress + " Get success")
 		return true, V.val
 	}
 	fmt.Println("Start to find in SSTable")
 	flag, V = db.searchInSSTabel(key, index)
 
+	go db.SendLog("Node:" + db.version.LocalAddress + " Get success")
 	return flag, V.val
 }
 

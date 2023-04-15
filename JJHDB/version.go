@@ -42,6 +42,9 @@ type Version struct {
 
 	Status   int //0:leader  1:back-up leader  2:follower
 	LeaderIP string
+
+	MasterIP    string
+	LogServerIP string
 }
 
 func (v *Version) AddSstablename(name string, id int) {

@@ -19,8 +19,8 @@ func main() {
 		var key, val string
 		fmt.Println("输入要写入的KV对:")
 		fmt.Scan(&key, &val)
-		db.Put(key, val)
-
+		x := db.Put(key, val)
+		fmt.Println("get seq: ", x)
 		// 	// var key string
 		// 	// fmt.Println("input K:")
 		// 	// fmt.Scan(&key)

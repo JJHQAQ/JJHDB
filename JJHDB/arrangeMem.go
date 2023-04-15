@@ -113,8 +113,6 @@ func (db *JDB) generateSSTable() bool {
 	db.imm.mutex.Lock()
 	db.generating.Lock()
 	if db.imm.table.IsEmpty() || db.generateflag {
-		fmt.Println("??? Why??: ", db.imm.table.IsEmpty(), db.generateflag)
-
 		db.imm.mutex.Unlock()
 		db.generating.Unlock()
 		return true
@@ -175,14 +173,25 @@ func (db *JDB) generateSSTable() bool {
 func (db *JDB) arrangeMem() {
 
 	needPersist := false
+	if db.logfile == nil {
+		db.logfile = db.newlogfile()
+
+		db.version.LogFileName = db.logfile.Name()
+
+		needPersist = true
+	}
+
 	if db.needarrange() {
 		db.mem.mutex.Lock()
 		db.imm.mutex.Lock()
 		db.mem, db.imm = db.imm, db.mem
 		db.mem.mutex.Unlock()
 		db.imm.mutex.Unlock()
-		db.version.LastLogFileName = db.logfile.Name()
-		go db.generateSSTable()
+
+		if db.logfile != nil {
+			db.version.LastLogFileName = db.logfile.Name()
+			go db.generateSSTable()
+		}
 		db.logfile.Close()
 		db.logfile = nil
 		needPersist = true

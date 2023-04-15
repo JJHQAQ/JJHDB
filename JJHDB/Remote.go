@@ -96,11 +96,70 @@ type RequestPUT struct {
 }
 
 type ReplyPUT struct {
-	seq uint64
+	Seq uint64
 }
 
 func (this DBServer) Put(req RequestPUT, res *ReplyPUT) error {
-	res.seq = this.db.Put(req.Key, req.Value)
+	res.Seq = this.db.Put(req.Key, req.Value)
+	return nil
+}
+
+type RequestHB struct {
+}
+
+type ReplyHB struct {
+	OK bool
+}
+
+var getHB bool = false
+
+func (this DBServer) HeartBeat(req RequestHB, res *ReplyHB) error {
+	if !getHB {
+		fmt.Println("get heatBeat!")
+		go this.db.SendLog("LeaderNode:" + this.db.version.LocalAddress + " build heartbeat protocol with master")
+		getHB = true
+	}
+	if this.db.version.Status == leader {
+		res.OK = true
+	} else {
+		res.OK = false
+	}
+	return nil
+}
+
+type RequestAssign struct {
+}
+
+type ReplyAssign struct {
+	OK bool
+}
+
+func (this DBServer) Assign(req RequestAssign, res *ReplyAssign) error {
+	if this.db.version.Status == back_up_leader {
+		this.db.version.Status = leader
+		this.db.version.persist()
+		res.OK = true
+	} else {
+		res.OK = false
+	}
+	return nil
+}
+
+type RequestNotice struct {
+	NewLeader string
+}
+
+type ReplyNotice struct {
+	OK bool
+}
+
+func (this DBServer) Notice(req RequestNotice, res *ReplyNotice) error {
+	this.db.addBackworkcnt()
+	defer this.db.delBackworkcnt()
+	this.db.version.LeaderIP = req.NewLeader
+	this.db.removeall()
+	this.db.FindLeader()
+	res.OK = true
 	return nil
 }
 
@@ -119,24 +178,60 @@ func (db *JDB) register(address string, status int) {
 	go db.repSSTable(S)
 }
 
+func (db *JDB) registerToMaster() {
+
+	type RequestRegM struct {
+		IP     string
+		Status int
+	}
+
+	type ReplyRegM struct {
+		LeaderIP string
+		Success  bool
+	}
+
+	conn, err1 := rpc.Dial("tcp", db.version.MasterIP)
+	if err1 != nil {
+		fmt.Println(err1)
+		return
+	}
+	defer conn.Close()
+
+	var res ReplyRegM
+	req := RequestRegM{
+		IP:     db.version.LocalAddress,
+		Status: db.version.Status,
+	}
+	err2 := conn.Call("MasterServer.Register", req, &res)
+	if err2 != nil {
+		fmt.Println(err2)
+	}
+	if res.Success {
+		fmt.Printf("注册Master成功")
+
+		db.version.LeaderIP = res.LeaderIP
+	} else {
+		panic("connect error\n")
+	}
+}
+
 func (db *JDB) StartService() {
 	var DBS *DBServer
 	DBS = new(DBServer)
 	DBS.db = db
 	err1 := rpc.RegisterName("DBServer", DBS)
 	if err1 != nil {
-		fmt.Println(err1)
-		return
+		panic(err1)
 	}
 	listener, err2 := net.Listen("tcp", db.version.LocalAddress)
 	if err2 != nil {
-		fmt.Println(err2)
-		return
+		panic(err2)
 	}
 	defer listener.Close()
 
+	db.registerToMaster()
 	db.FindLeader()
-
+	go db.SendLog("Node:" + db.version.LocalAddress + "  Start!")
 	for {
 		conn, err3 := listener.Accept()
 		fmt.Println("connect from", conn.RemoteAddr().String())

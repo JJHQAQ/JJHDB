@@ -9,5 +9,7 @@
 	"Sstablenames": [],
 	"LocalAddress": "127.0.0.1:8080",
 	"Status": 0,
-	"LeaderIP": "127.0.0.1:8080"
+	"LeaderIP": "127.0.0.1:8080",
+	"MasterIP": "127.0.0.1:8079",
+	"LogServerIP": "127.0.0.1:8078"
 }

@@ -15,6 +15,7 @@ type Server struct {
 
 	ready int //0：unready  1:ready  2:delete
 
+	Address string
 }
 
 const UNREADY int = 0
@@ -26,6 +27,7 @@ func NewServer(address string, status int) *Server {
 	server = new(Server)
 	server.Status = status
 	server.ready = UNREADY
+	server.Address = address
 	conn, err1 := rpc.Dial("tcp", address)
 	if err1 != nil {
 		fmt.Println(err1)
